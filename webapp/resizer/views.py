@@ -11,6 +11,7 @@ import os
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from .forms import ImageUpload
 from .models import Post
+import re
 
 #This is a function that processes the data and passes it to the HTML files for the viewer's page along with user's page
 def home(request):
@@ -109,13 +110,18 @@ def homepage(request):
 def signup(request):
     if request.method =='POST':
         if request.POST['password1'] == request.POST['password2']: #processes only if both passwords are the same
-            try:
-                user= User.objects.get(username=request.POST['username'])
-                return render(request, 'resizer/signup.html',{'error':'Username has already been taken'}) #sends error if username already exists
-            except User.DoesNotExist:
-                user = User.objects.create_user(request.POST['username'], password= request.POST['password1'])
-                login(request, user)
-                return render(request, 'resizer/login.html')
+            password_validate = validate(request.POST['password1'])
+            if password_validate:
+                try:
+                    user= User.objects.get(username=request.POST['username'])
+                    return render(request, 'resizer/signup.html',{'error':'Username has already been taken'}) #sends error if username already exists
+                except User.DoesNotExist:
+                    user = User.objects.create_user(request.POST['username'], password= request.POST['password1'])
+                    login(request, user)
+                    return render(request, 'resizer/login.html')
+            else:
+                return render(request, 'resizer/signup.html',
+                              {'error': 'Your password wont satisfy the requirements'})
         else:
             return render(request, 'resizer/signup.html',{'error':'Passwords didn\'t match'}) #otherwise sends an error message
     else:
@@ -170,3 +176,15 @@ def deleteFile(filename):
 		os.remove(filename)
 	except OSError:
 		print('couldnt delete file')
+
+def validate(password):
+    while True:
+        if len(password) < 8:
+            return False
+        elif re.search('[0-9]', password) is None:
+            return False
+        elif re.search('[A-Z]', password) is None:
+            return False
+        else:
+            return True
+            break
